@@ -34,4 +34,10 @@ test =
         fuel2 14 @?= 2
         fuel2 1969 @?= 966
         fuel2 100756 @?= 50346
+    , testCase "part1" $ do
+        p1 <- part1
+        p1 @?= 3252897
+    , testCase "part2" $ do
+        p2 <- part2
+        p2 @?= 4876469
     ]

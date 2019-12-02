@@ -10,6 +10,8 @@ dependencies:
 - base >= 4.7 && < 5
 - tasty
 - tasty-hunit
+- split
+- vector
 
 library:
   source-dirs: src
