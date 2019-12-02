@@ -1,0 +1,16 @@
+name:                advent-of-code
+version:             0.1.0.0
+github:              "callum-oakley/advent-of-code-2019"
+license:             BSD3
+author:              "Callum Oakley"
+maintainer:          "c.oakley108@gmail.com"
+copyright:           "2019 Callum Oakley"
+
+dependencies:
+- base >= 4.7 && < 5
+- tasty
+- tasty-hunit
+
+library:
+  source-dirs: src
+

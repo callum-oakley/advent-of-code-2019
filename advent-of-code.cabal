@@ -1,0 +1,34 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 7a638d00a7f489582bdce67c68fb58d5d45349fc02b7f1f2d1e385e7d5262dde
+
+name:           advent-of-code
+version:        0.1.0.0
+homepage:       https://github.com/callum-oakley/advent-of-code-2019#readme
+bug-reports:    https://github.com/callum-oakley/advent-of-code-2019/issues
+author:         Callum Oakley
+maintainer:     c.oakley108@gmail.com
+copyright:      2019 Callum Oakley
+license:        BSD3
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/callum-oakley/advent-of-code-2019
+
+library
+  exposed-modules:
+      Day01
+  other-modules:
+      Paths_advent_of_code
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.7 && <5
+    , tasty
+    , tasty-hunit
+  default-language: Haskell2010
