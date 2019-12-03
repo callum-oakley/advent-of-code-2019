@@ -12,6 +12,7 @@ dependencies:
 - tasty-hunit
 - split
 - vector
+- containers
 
 library:
   source-dirs: src

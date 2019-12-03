@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 05eaf1d0a736b3d5826679582fb0fd1b7f56795677e0c36f41324e87486d62db
+-- hash: 820537bd21b9b6b43da21dd715f012c151639b40d6c7a034b57cd62dba2c942f
 
 name:           advent-of-code
 version:        0.1.0.0
@@ -24,12 +24,14 @@ library
   exposed-modules:
       Day01
       Day02
+      Day03
   other-modules:
       Paths_advent_of_code
   hs-source-dirs:
       src
   build-depends:
       base >=4.7 && <5
+    , containers
     , split
     , tasty
     , tasty-hunit
