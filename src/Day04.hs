@@ -1,55 +1,40 @@
 module Day04 where
 
+import           Data.Char
+import           Data.List
 import           Data.List.Split
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
-parse :: String -> (Int, Int)
-parse s = (a, b)
-  where
-    [a, b] = map read . splitOn "-" $ s
-
 hasPair :: String -> Bool
-hasPair xs
-  | length xs < 2 = False
-hasPair (x:y:ys) = x == y || hasPair (y : ys)
+hasPair = any (>= 2) . map length . group
 
 hasStandalonePair :: String -> Bool
-hasStandalonePair xs
-  | length xs < 2 = False
-hasStandalonePair [w, x] = w == x
-hasStandalonePair (w:x:y:ys) = w == x && x /= y || go (w : x : y : ys)
+hasStandalonePair = elem 2 . map length . group
+
+nonDecreasing :: [String]
+nonDecreasing = map (map intToDigit) $ concat [go [d] | d <- [0 .. 9]]
   where
-    go ws
-      | length ws < 4 = False
-    go [w, x, y, z] = w /= x && x == y && y /= z || x /= y && y == z
-    go (w:x:y:z:zs) = w /= x && x == y && y /= z || go (x : y : z : zs)
+    go p
+      | length p == 6 = [p]
+    go (p:ps) = concat [go (q : p : ps) | q <- [0 .. p]]
 
-nonDecreasing :: String -> Bool
-nonDecreasing xs
-  | length xs < 2 = True
-nonDecreasing (x:y:ys) = x <= y && nonDecreasing (y : ys)
-
-range :: (Int, Int)
-range = parse "134792-675810"
+range :: (String, String)
+range = ("134792", "675810")
 
 part1 :: Int
 part1 =
-  length [n | n <- [lower .. upper], let m = show n, hasPair m, nonDecreasing m]
-  where
-    (lower, upper) = range
+  length [p | p <- nonDecreasing, hasPair p, p >= fst range, p <= snd range]
 
 part2 :: Int
 part2 =
   length
-    [ n
-    | n <- [lower .. upper]
-    , let m = show n
-    , hasStandalonePair m
-    , nonDecreasing m
+    [ p
+    | p <- nonDecreasing
+    , hasStandalonePair p
+    , p >= fst range
+    , p <= snd range
     ]
-  where
-    (lower, upper) = range
 
 test =
   defaultMain $
