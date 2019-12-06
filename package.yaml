@@ -10,9 +10,11 @@ dependencies:
 - base >= 4.7 && < 5
 - tasty
 - tasty-hunit
+- tasty-quickcheck
 - split
 - vector
 - containers
+- mtl
 
 library:
   source-dirs: src

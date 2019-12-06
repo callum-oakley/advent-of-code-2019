@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 82df84a538fc654febfd49318a382d3d906b5c72359408b69c545a6f6941c0e8
+-- hash: 0477b9c59508d5eb923e93b45e688710c395cf23b5c731e8f98a92152ff0ccfa
 
 name:           advent-of-code
 version:        0.1.0.0
@@ -34,8 +34,10 @@ library
   build-depends:
       base >=4.7 && <5
     , containers
+    , mtl
     , split
     , tasty
     , tasty-hunit
+    , tasty-quickcheck
     , vector
   default-language: Haskell2010

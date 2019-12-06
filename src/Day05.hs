@@ -1,123 +1,189 @@
+{-# LANGUAGE TupleSections #-}
+
 module Day05 where
 
+import           Control.Monad.RWS
 import           Data.List.Split
-import           Data.Vector      (Vector, fromList, (!), (//))
+import           Data.Vector           (Vector, fromList, (!), (//))
 import           Test.Tasty
 import           Test.Tasty.HUnit
+import           Test.Tasty.QuickCheck
 
 type Memory = Vector Int
-
-type Input = [Int]
-
-type Output = [Int]
-
-data Program =
-  Program Int Memory [Int] [Int]
-  deriving (Show, Eq)
 
 data Mode
   = Position
   | Immediate
   deriving (Show, Eq)
 
+data Parameter =
+  Parameter Mode Int
+  deriving (Show, Eq)
+
 data Instruction
-  = Add Mode Mode Mode
-  | Multiply Mode Mode Mode
-  | Receive Mode
-  | Send Mode
+  = Add Parameter Parameter Parameter
+  | Multiply Parameter Parameter Parameter
+  | Receive Parameter
+  | Send Parameter
+  | JumpIfTrue Parameter Parameter
+  | JumpIfFalse Parameter Parameter
+  | LessThan Parameter Parameter Parameter
+  | Equal Parameter Parameter Parameter
   | Halt
   deriving (Show, Eq)
 
-parse :: String -> Program
-parse s = Program 0 (fromList . map read . splitOn "," $ s) [] []
+parse :: String -> Memory
+parse = fromList . map read . splitOn ","
 
-instruction :: Int -> Instruction
-instruction n =
+instruction :: Int -> Int -> Instruction
+instruction i n =
   case n `mod` 100 of
-    1  -> Add (mode n 1) (mode n 2) (mode n 3)
-    2  -> Multiply (mode n 1) (mode n 2) (mode n 3)
-    3  -> Receive (mode n 1)
-    4  -> Send (mode n 1)
+    1  -> Add (param n 1) (param n 2) (param n 3)
+    2  -> Multiply (param n 1) (param n 2) (param n 3)
+    3  -> Receive (param n 1)
+    4  -> Send (param n 1)
+    5  -> JumpIfTrue (param n 1) (param n 2)
+    6  -> JumpIfFalse (param n 1) (param n 2)
+    7  -> LessThan (param n 1) (param n 2) (param n 3)
+    8  -> Equal (param n 1) (param n 2) (param n 3)
     99 -> Halt
   where
-    mode n m =
+    param n m =
       case n `div` (10 ^ (m + 1)) `mod` 10 of
-        0 -> Position
-        1 -> Immediate
+        0 -> Parameter Position (i + m)
+        1 -> Parameter Immediate (i + m)
 
-fetchVal :: Mode -> Memory -> Int -> Int -> Int
-fetchVal mode m i offset = m ! (fetchAddr mode m i offset)
+fetchVal :: Parameter -> Memory -> Int
+fetchVal p m = m ! fetchAddr p m
 
-fetchAddr :: Mode -> Memory -> Int -> Int -> Int
-fetchAddr Position m i offset  = m ! (i + offset)
-fetchAddr Immediate m i offset = i + offset
+fetchAddr :: Parameter -> Memory -> Int
+fetchAddr (Parameter Position i) m  = m ! i
+fetchAddr (Parameter Immediate i) _ = i
 
-step :: Program -> Maybe Program
-step (Program i m inp out) =
-  case instruction $ m ! i of
-    Add mode1 mode2 mode3 ->
-      Just $
-      Program
-        (i + 4)
-        (m //
-         [ ( fetchAddr mode3 m i 3
-           , (fetchVal mode1 m i 1) + (fetchVal mode2 m i 2))
-         ])
-        inp
-        out
-    Multiply mode1 mode2 mode3 ->
-      Just $
-      Program
-        (i + 4)
-        (m //
-         [ ( fetchAddr mode3 m i 3
-           , (fetchVal mode1 m i 1) * (fetchVal mode2 m i 2))
-         ])
-        inp
-        out
-    Receive mode1 ->
-      Just $
-      Program (i + 2) (m // [(fetchAddr mode1 m i 1, head inp)]) (tail inp) out
-    Send mode1 -> Just $ Program (i + 2) m inp ((fetchVal mode1 m i 1) : out)
-    Halt -> Nothing
+run' :: RWS Int [Int] (Int, Memory) ()
+run' = do
+  (i, m) <- get
+  case instruction i $ m ! i of
+    Add p1 p2 p3 -> do
+      put (i + 4, m // [(fetchAddr p3 m, fetchVal p1 m + fetchVal p2 m)])
+      run'
+    Multiply p1 p2 p3 -> do
+      put (i + 4, m // [(fetchAddr p3 m, fetchVal p1 m * fetchVal p2 m)])
+      run'
+    Receive p1 -> do
+      input <- ask
+      put (i + 2, m // [(fetchAddr p1 m, input)])
+      run'
+    Send p1 -> do
+      tell [fetchVal p1 m]
+      put (i + 2, m)
+      run'
+    JumpIfTrue p1 p2 -> do
+      put
+        ( if fetchVal p1 m /= 0
+            then fetchVal p2 m
+            else i + 3
+        , m)
+      run'
+    JumpIfFalse p1 p2 -> do
+      put
+        ( if fetchVal p1 m == 0
+            then fetchVal p2 m
+            else i + 3
+        , m)
+      run'
+    LessThan p1 p2 p3 -> do
+      put
+        ( i + 4
+        , m //
+          [ ( fetchAddr p3 m
+            , if fetchVal p1 m < fetchVal p2 m
+                then 1
+                else 0)
+          ])
+      run'
+    Equal p1 p2 p3 -> do
+      put
+        ( i + 4
+        , m //
+          [ ( fetchAddr p3 m
+            , if fetchVal p1 m == fetchVal p2 m
+                then 1
+                else 0)
+          ])
+      run'
+    Halt -> return ()
 
-run' :: Program -> Program
-run' p =
-  case step p of
-    Just p' -> run' p'
-    Nothing -> p
+run :: Int -> Memory -> [Int]
+run i = snd . execRWS run' i . (0, )
 
-input :: Input -> Program -> Program
-input inp (Program i m _ out) = Program i m inp out
-
-output :: Program -> Output
-output (Program _ _ _ out) = out
-
-run :: Input -> Program -> Output
-run inp = output . run' . input inp
-
-program :: IO Program
-program = parse <$> readFile "data/input05"
+memory :: IO Memory
+memory = parse <$> readFile "data/input05"
 
 part1 :: IO Int
-part1 = head <$> run [1] <$> program
+part1 = last . run 1 <$> memory
+
+part2 :: IO Int
+part2 = last . run 5 <$> memory
 
 test =
   defaultMain $
   testGroup
     "day05"
-    [ testCase "run'" $ do
-        run' (parse "1002,4,3,4,33") @?=
-          Program 4 (fromList [1002, 4, 3, 4, 99]) [] []
-        run' (parse "1101,100,-1,4,0") @?=
-          Program 4 (fromList [1101, 100, -1, 4, 99]) [] []
-    , testCase "run" $ do
-        run [5] (parse "3,0,4,0,99") @?= [5]
-        run [42] (parse "3,0,4,0,99") @?= [42]
-    , testCase "diagnostics" $ do
-        out <- run [1] <$> program
-        tail out @?= [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    [ testCase "diagnostics" $ do
+        out <- run 1 <$> memory
+        init out @?= [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    , testProperty "run 3,0,4,0,99" $ \x -> run x (parse "3,0,4,0,99") === [x]
+    , testProperty "run 3,9,8,9,10,9,4,9,99,-1,8" $ \x ->
+        run x (parse "3,9,8,9,10,9,4,9,99,-1,8") ===
+        [ if x == 8
+            then 1
+            else 0
+        ]
+    , testProperty "run 3,9,8,9,10,9,4,9,99,-1,8" $ \x ->
+        run x (parse "3,9,7,9,10,9,4,9,99,-1,8") ===
+        [ if x < 8
+            then 1
+            else 0
+        ]
+    , testProperty "run 3,9,8,9,10,9,4,9,99,-1,8" $ \x ->
+        run x (parse "3,3,1108,-1,8,3,4,3,99") ===
+        [ if x == 8
+            then 1
+            else 0
+        ]
+    , testProperty "run 3,9,8,9,10,9,4,9,99,-1,8" $ \x ->
+        run x (parse "3,3,1107,-1,8,3,4,3,99") ===
+        [ if x < 8
+            then 1
+            else 0
+        ]
+    , testProperty "run 3,9,8,9,10,9,4,9,99,-1,8" $ \x ->
+        run x (parse "3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9") ===
+        [ if x /= 0
+            then 1
+            else 0
+        ]
+    , testProperty "run 3,9,8,9,10,9,4,9,99,-1,8" $ \x ->
+        run x (parse "3,3,1105,-1,9,1101,0,0,12,4,12,99,1") ===
+        [ if x /= 0
+            then 1
+            else 0
+        ]
+    , testProperty "sample input" $
+      idempotentIOProperty $ do
+        p <- parse <$> readFile "data/test05"
+        return $ \x ->
+          run x p ===
+          [ case compare x 8 of
+              LT -> 999
+              EQ -> 1000
+              GT -> 1001
+          ]
     , testCase "part1" $ do
         p1 <- part1
         p1 @?= 14155342
+    , testCase "part2" $ do
+        p2 <- part2
+        p2 @?= 8684145
     ]
