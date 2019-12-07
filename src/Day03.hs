@@ -1,11 +1,8 @@
 module Day03 where
 
-import           Data.Foldable
 import           Data.List.Split
 import           Data.Map.Strict  (Map)
 import qualified Data.Map.Strict  as Map
-import           Data.Set         (Set)
-import qualified Data.Set         as Set
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
@@ -63,8 +60,11 @@ part1 = part1' <$> paths
 part2 :: IO Int
 part2 = part2' <$> paths
 
-test =
-  defaultMain $
+test :: IO ()
+test = defaultMain tests
+
+tests :: TestTree
+tests =
   testGroup
     "day03"
     [ testCase "part1'" $ do

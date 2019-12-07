@@ -36,8 +36,11 @@ part1 = part1' <$> graph
 part2 :: IO Int
 part2 = part2' <$> graph
 
-test =
-  defaultMain $
+test :: IO ()
+test = defaultMain tests
+
+tests :: TestTree
+tests =
   testGroup
     "day06"
     [ testCase "part1'" $ do

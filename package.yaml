@@ -6,6 +6,9 @@ author:              "Callum Oakley"
 maintainer:          "c.oakley108@gmail.com"
 copyright:           "2019 Callum Oakley"
 
+ghc-options:
+- -Wall
+
 dependencies:
 - base >= 4.7 && < 5
 - tasty
@@ -17,7 +20,14 @@ dependencies:
 - mtl
 - stm
 - async
+- QuickCheck
 
 library:
   source-dirs: src
 
+tests:
+  advent-of-code-test:
+    main: Test.hs
+    source-dirs: test
+    dependencies:
+    - advent-of-code

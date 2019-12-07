@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ad4133e192ad15e5d6b2246637f34a2af90ebfc93a2330ae7ab09c5946e9eeb4
+-- hash: c744b88e54224ab24c943e842e8b4887f6a698cf8510993de41e6d8f5c02e47f
 
 name:           advent-of-code
 version:        0.1.0.0
@@ -29,13 +29,38 @@ library
       Day05
       Day06
       Day07
-      Tmp
+      Intcode
   other-modules:
       Paths_advent_of_code
   hs-source-dirs:
       src
+  ghc-options: -Wall
   build-depends:
-      async
+      QuickCheck
+    , async
+    , base >=4.7 && <5
+    , containers
+    , mtl
+    , split
+    , stm
+    , tasty
+    , tasty-hunit
+    , tasty-quickcheck
+    , vector
+  default-language: Haskell2010
+
+test-suite advent-of-code-test
+  type: exitcode-stdio-1.0
+  main-is: Test.hs
+  other-modules:
+      Paths_advent_of_code
+  hs-source-dirs:
+      test
+  ghc-options: -Wall
+  build-depends:
+      QuickCheck
+    , advent-of-code
+    , async
     , base >=4.7 && <5
     , containers
     , mtl

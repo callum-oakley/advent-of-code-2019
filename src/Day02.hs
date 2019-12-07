@@ -49,8 +49,11 @@ part2 = do
           ]
   return $ 100 * noun + verb
 
-test =
-  defaultMain $
+test :: IO ()
+test = defaultMain tests
+
+tests :: TestTree
+tests =
   testGroup
     "day02"
     [ testCase "step" $ do

@@ -21,8 +21,11 @@ part1 = sum . map fuel <$> masses
 part2 :: IO Integer
 part2 = sum . map fuel2 <$> masses
 
-test =
-  defaultMain $
+test :: IO ()
+test = defaultMain tests
+
+tests :: TestTree
+tests =
   testGroup
     "day01"
     [ testCase "fuel" $ do

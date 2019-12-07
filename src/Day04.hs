@@ -2,7 +2,6 @@ module Day04 where
 
 import           Data.Char
 import           Data.List
-import           Data.List.Split
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
@@ -36,8 +35,11 @@ part2 =
     , p <= snd range
     ]
 
-test =
-  defaultMain $
+test :: IO ()
+test = defaultMain tests
+
+tests :: TestTree
+tests =
   testGroup
     "day04"
     [testCase "part1" $ part1 @?= 1955, testCase "part2" $ part2 @?= 1319]
