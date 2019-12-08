@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c744b88e54224ab24c943e842e8b4887f6a698cf8510993de41e6d8f5c02e47f
+-- hash: 7073f433a70dbe6d64b7c746607288ea612564eec7d3b9ca23e54540c080074c
 
 name:           advent-of-code
 version:        0.1.0.0
@@ -29,6 +29,7 @@ library
       Day05
       Day06
       Day07
+      Day08
       Intcode
   other-modules:
       Paths_advent_of_code
@@ -37,6 +38,7 @@ library
   ghc-options: -Wall
   build-depends:
       QuickCheck
+    , array
     , async
     , base >=4.7 && <5
     , containers
@@ -60,6 +62,7 @@ test-suite advent-of-code-test
   build-depends:
       QuickCheck
     , advent-of-code
+    , array
     , async
     , base >=4.7 && <5
     , containers

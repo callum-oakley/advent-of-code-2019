@@ -21,6 +21,7 @@ dependencies:
 - stm
 - async
 - QuickCheck
+- array
 
 library:
   source-dirs: src
