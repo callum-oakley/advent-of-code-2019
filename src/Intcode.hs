@@ -1,7 +1,7 @@
 module Intcode
   ( parse
+  , runDynamic
   , run
-  , runStatic
   , Memory
   ) where
 
@@ -137,16 +137,16 @@ run' = do
       run'
     Halt -> return ()
 
-run :: Memory -> (TQueue Int, TQueue Int) -> IO ((), Machine)
-run m qs =
+runDynamic :: Memory -> (TQueue Int, TQueue Int) -> IO ((), Machine)
+runDynamic m qs =
   runStateT
     (runReaderT run' qs)
     (0, 0, fromList (toList m <> replicate (2 ^ 8) 0))
 
-runStatic :: Memory -> [Int] -> IO [Int]
-runStatic m input = do
+run :: Memory -> [Int] -> IO [Int]
+run m input = do
   inQ <- newTQueueIO
   outQ <- newTQueueIO
   traverse_ (atomically . writeTQueue inQ) input
-  _ <- run m (inQ, outQ)
+  _ <- runDynamic m (inQ, outQ)
   atomically $ flushTQueue outQ

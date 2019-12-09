@@ -17,7 +17,7 @@ type Phase = Int
 ampChain :: Intcode.Memory -> [Phase] -> IO Signal
 ampChain m = foldM step 0
   where
-    step signal phase = head <$> Intcode.runStatic m [phase, signal]
+    step signal phase = head <$> Intcode.run m [phase, signal]
 
 ampLoop :: Intcode.Memory -> [Phase] -> IO Signal
 ampLoop m phases = do
@@ -25,7 +25,7 @@ ampLoop m phases = do
   sequenceA_ $
     zipWith (\q phase -> atomically $ writeTQueue q phase) queues phases
   atomically $ writeTQueue (head queues) 0
-  amps <- mapM (async . Intcode.run m) $ zip queues (tail $ cycle queues)
+  amps <- mapM (async . Intcode.runDynamic m) $ zip queues (tail $ cycle queues)
   mapM_ wait amps
   atomically $ readTQueue (head queues)
 

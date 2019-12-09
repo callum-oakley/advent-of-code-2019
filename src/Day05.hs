@@ -13,12 +13,12 @@ memory = Intcode.parse <$> readFile "data/input05"
 part1 :: IO Int
 part1 = do
   m <- memory
-  last <$> Intcode.runStatic m [1]
+  last <$> Intcode.run m [1]
 
 part2 :: IO Int
 part2 = do
   m <- memory
-  last <$> Intcode.runStatic m [5]
+  last <$> Intcode.run m [5]
 
 test :: IO ()
 test = defaultMain tests
@@ -29,18 +29,17 @@ tests =
     "day05"
     [ testCase "diagnostics" $ do
         m <- memory
-        out <- Intcode.runStatic m [1]
+        out <- Intcode.run m [1]
         init out @?= [0, 0, 0, 0, 0, 0, 0, 0, 0]
     , testProperty "run 3,0,4,0,99" $
       monadicIO $ do
         x <- pick arbitrary
-        out <- run $ Intcode.runStatic (Intcode.parse "3,0,4,0,99") [x]
+        out <- run $ Intcode.run (Intcode.parse "3,0,4,0,99") [x]
         assert $ out == [x]
     , testProperty "run 3,9,8,9,10,9,4,9,99,-1,8" $
       monadicIO $ do
         x <- pick arbitrary
-        out <-
-          run $ Intcode.runStatic (Intcode.parse "3,9,8,9,10,9,4,9,99,-1,8") [x]
+        out <- run $ Intcode.run (Intcode.parse "3,9,8,9,10,9,4,9,99,-1,8") [x]
         assert $
           out ==
           [ if x == 8
@@ -50,8 +49,7 @@ tests =
     , testProperty "run 3,9,8,9,10,9,4,9,99,-1,8" $
       monadicIO $ do
         x <- pick arbitrary
-        out <-
-          run $ Intcode.runStatic (Intcode.parse "3,9,7,9,10,9,4,9,99,-1,8") [x]
+        out <- run $ Intcode.run (Intcode.parse "3,9,7,9,10,9,4,9,99,-1,8") [x]
         assert $
           out ==
           [ if x < 8
@@ -61,8 +59,7 @@ tests =
     , testProperty "run 3,9,8,9,10,9,4,9,99,-1,8" $
       monadicIO $ do
         x <- pick arbitrary
-        out <-
-          run $ Intcode.runStatic (Intcode.parse "3,3,1108,-1,8,3,4,3,99") [x]
+        out <- run $ Intcode.run (Intcode.parse "3,3,1108,-1,8,3,4,3,99") [x]
         assert $
           out ==
           [ if x == 8
@@ -72,8 +69,7 @@ tests =
     , testProperty "run 3,9,8,9,10,9,4,9,99,-1,8" $
       monadicIO $ do
         x <- pick arbitrary
-        out <-
-          run $ Intcode.runStatic (Intcode.parse "3,3,1107,-1,8,3,4,3,99") [x]
+        out <- run $ Intcode.run (Intcode.parse "3,3,1107,-1,8,3,4,3,99") [x]
         assert $
           out ==
           [ if x < 8
@@ -85,7 +81,7 @@ tests =
         x <- pick arbitrary
         out <-
           run $
-          Intcode.runStatic
+          Intcode.run
             (Intcode.parse "3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9")
             [x]
         assert $
@@ -99,9 +95,7 @@ tests =
         x <- pick arbitrary
         out <-
           run $
-          Intcode.runStatic
-            (Intcode.parse "3,3,1105,-1,9,1101,0,0,12,4,12,99,1")
-            [x]
+          Intcode.run (Intcode.parse "3,3,1105,-1,9,1101,0,0,12,4,12,99,1") [x]
         assert $
           out ==
           [ if x /= 0
@@ -112,7 +106,7 @@ tests =
       monadicIO $ do
         x <- pick arbitrary
         m <- run $ Intcode.parse <$> readFile "data/test05"
-        out <- run $ Intcode.runStatic m [x]
+        out <- run $ Intcode.run m [x]
         assert $
           out ==
           [ case compare x 8 of
