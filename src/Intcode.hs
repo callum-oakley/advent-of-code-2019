@@ -14,11 +14,14 @@ import           Data.Vector            (Vector, fromList, (!), (//))
 
 type Memory = Vector Int
 
-type Machine = (Int, Memory)
+type RelativeBase = Int
+
+type Machine = (Int, RelativeBase, Memory)
 
 data Mode
   = Position
   | Immediate
+  | Relative
   deriving (Show, Eq)
 
 data Parameter =
@@ -34,6 +37,7 @@ data Instruction
   | JumpIfFalse Parameter Parameter
   | LessThan Parameter Parameter Parameter
   | Equal Parameter Parameter Parameter
+  | AdjustRelativeBase Parameter
   | Halt
   deriving (Show, Eq)
 
@@ -51,60 +55,68 @@ instruction i n =
     6  -> JumpIfFalse (param n 1) (param n 2)
     7  -> LessThan (param n 1) (param n 2) (param n 3)
     8  -> Equal (param n 1) (param n 2) (param n 3)
+    9  -> AdjustRelativeBase (param n 1)
     99 -> Halt
   where
     param n m =
       case n `div` (10 ^ (m + 1)) `mod` 10 of
         0 -> Parameter Position (i + m)
         1 -> Parameter Immediate (i + m)
+        2 -> Parameter Relative (i + m)
 
-fetchVal :: Parameter -> Memory -> Int
-fetchVal p m = m ! fetchAddr p m
+fetchVal :: Parameter -> RelativeBase -> Memory -> Int
+fetchVal p b m = m ! fetchAddr p b m
 
-fetchAddr :: Parameter -> Memory -> Int
-fetchAddr (Parameter Position i) m  = m ! i
-fetchAddr (Parameter Immediate i) _ = i
+fetchAddr :: Parameter -> RelativeBase -> Memory -> Int
+fetchAddr (Parameter Position i) _ m  = m ! i
+fetchAddr (Parameter Immediate i) _ _ = i
+fetchAddr (Parameter Relative i) b m  = b + m ! i
 
 run' :: ReaderT (TQueue Int, TQueue Int) (StateT Machine IO) ()
 run' = do
-  (i, m) <- get
+  (i, b, m) <- get
   case instruction i $ m ! i of
     Add p1 p2 p3 -> do
-      put (i + 4, m // [(fetchAddr p3 m, fetchVal p1 m + fetchVal p2 m)])
+      put
+        (i + 4, b, m // [(fetchAddr p3 b m, fetchVal p1 b m + fetchVal p2 b m)])
       run'
     Multiply p1 p2 p3 -> do
-      put (i + 4, m // [(fetchAddr p3 m, fetchVal p1 m * fetchVal p2 m)])
+      put
+        (i + 4, b, m // [(fetchAddr p3 b m, fetchVal p1 b m * fetchVal p2 b m)])
       run'
     Receive p1 -> do
       inQ <- asks fst
       input <- lift . lift . atomically . readTQueue $ inQ
-      put (i + 2, m // [(fetchAddr p1 m, input)])
+      put (i + 2, b, m // [(fetchAddr p1 b m, input)])
       run'
     Send p1 -> do
       outQ <- asks snd
-      lift . lift . atomically . writeTQueue outQ $ fetchVal p1 m
-      put (i + 2, m)
+      lift . lift . atomically . writeTQueue outQ $ fetchVal p1 b m
+      put (i + 2, b, m)
       run'
     JumpIfTrue p1 p2 -> do
       put
-        ( if fetchVal p1 m /= 0
-            then fetchVal p2 m
+        ( if fetchVal p1 b m /= 0
+            then fetchVal p2 b m
             else i + 3
+        , b
         , m)
       run'
     JumpIfFalse p1 p2 -> do
       put
-        ( if fetchVal p1 m == 0
-            then fetchVal p2 m
+        ( if fetchVal p1 b m == 0
+            then fetchVal p2 b m
             else i + 3
+        , b
         , m)
       run'
     LessThan p1 p2 p3 -> do
       put
         ( i + 4
+        , b
         , m //
-          [ ( fetchAddr p3 m
-            , if fetchVal p1 m < fetchVal p2 m
+          [ ( fetchAddr p3 b m
+            , if fetchVal p1 b m < fetchVal p2 b m
                 then 1
                 else 0)
           ])
@@ -112,17 +124,24 @@ run' = do
     Equal p1 p2 p3 -> do
       put
         ( i + 4
+        , b
         , m //
-          [ ( fetchAddr p3 m
-            , if fetchVal p1 m == fetchVal p2 m
+          [ ( fetchAddr p3 b m
+            , if fetchVal p1 b m == fetchVal p2 b m
                 then 1
                 else 0)
           ])
       run'
+    AdjustRelativeBase p1 -> do
+      put (i + 2, b + fetchVal p1 b m, m)
+      run'
     Halt -> return ()
 
 run :: Memory -> (TQueue Int, TQueue Int) -> IO ((), Machine)
-run m qs = runStateT (runReaderT run' qs) (0, m)
+run m qs =
+  runStateT
+    (runReaderT run' qs)
+    (0, 0, fromList (toList m <> replicate (2 ^ 8) 0))
 
 runStatic :: Memory -> [Int] -> IO [Int]
 runStatic m input = do
