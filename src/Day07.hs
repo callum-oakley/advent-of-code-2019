@@ -14,35 +14,35 @@ type Signal = Int
 
 type Phase = Int
 
-ampChain :: Intcode.Memory -> [Phase] -> IO Signal
-ampChain m = foldM step 0
+ampChain :: Intcode.Program -> [Phase] -> IO Signal
+ampChain p = foldM step 0
   where
-    step signal phase = head <$> Intcode.run m [phase, signal]
+    step signal phase = head <$> Intcode.run p [phase, signal]
 
-ampLoop :: Intcode.Memory -> [Phase] -> IO Signal
-ampLoop m phases = do
+ampLoop :: Intcode.Program -> [Phase] -> IO Signal
+ampLoop p phases = do
   queues <- sequenceA . replicate 5 $ newTQueueIO
   sequenceA_ $
     zipWith (\q phase -> atomically $ writeTQueue q phase) queues phases
   atomically $ writeTQueue (head queues) 0
-  amps <- mapM (async . Intcode.runDynamic m) $ zip queues (tail $ cycle queues)
+  amps <- mapM (async . Intcode.runDynamic p) $ zip queues (tail $ cycle queues)
   mapM_ wait amps
   atomically $ readTQueue (head queues)
 
-part1' :: Intcode.Memory -> IO Signal
-part1' m = fmap maximum . mapM (ampChain m) . permutations $ [0 .. 4]
+part1' :: Intcode.Program -> IO Signal
+part1' p = fmap maximum . mapM (ampChain p) . permutations $ [0 .. 4]
 
-part2' :: Intcode.Memory -> IO Signal
-part2' m = fmap maximum . mapM (ampLoop m) . permutations $ [5 .. 9]
+part2' :: Intcode.Program -> IO Signal
+part2' p = fmap maximum . mapM (ampLoop p) . permutations $ [5 .. 9]
 
-memory :: IO Intcode.Memory
-memory = Intcode.parse <$> readFile "data/input07"
+program :: IO Intcode.Program
+program = Intcode.parse <$> readFile "data/input07"
 
 part1 :: IO Signal
-part1 = part1' =<< memory
+part1 = part1' =<< program
 
 part2 :: IO Signal
-part2 = part2' =<< memory
+part2 = part2' =<< program
 
 test :: IO ()
 test = defaultMain tests

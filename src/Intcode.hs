@@ -2,7 +2,7 @@ module Intcode
   ( parse
   , runDynamic
   , run
-  , Memory
+  , Program
   ) where
 
 import           Control.Concurrent.STM
@@ -11,6 +11,8 @@ import           Control.Monad.State
 import           Data.Foldable
 import           Data.List.Split
 import           Data.Vector            (Vector, fromList, (!), (//))
+
+type Program = [Int]
 
 type Memory = Vector Int
 
@@ -41,8 +43,8 @@ data Instruction
   | Halt
   deriving (Show, Eq)
 
-parse :: String -> Memory
-parse = fromList . map read . splitOn ","
+parse :: String -> Program
+parse = map read . splitOn ","
 
 instruction :: Int -> Int -> Instruction
 instruction i n =
@@ -137,13 +139,12 @@ run' = do
       run'
     Halt -> return ()
 
-runDynamic :: Memory -> (TQueue Int, TQueue Int) -> IO ((), Machine)
-runDynamic m qs =
-  runStateT
-    (runReaderT run' qs)
-    (0, 0, fromList (toList m <> replicate (2 ^ 8) 0))
+runDynamic :: Program -> (TQueue Int, TQueue Int) -> IO ()
+runDynamic m qs = do
+  runStateT (runReaderT run' qs) (0, 0, fromList (m <> replicate (2 ^ 8) 0))
+  return ()
 
-run :: Memory -> [Int] -> IO [Int]
+run :: Program -> [Int] -> IO [Int]
 run m input = do
   inQ <- newTQueueIO
   outQ <- newTQueueIO

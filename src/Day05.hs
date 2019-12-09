@@ -7,18 +7,18 @@ import           Test.Tasty.QuickCheck
 
 import qualified Intcode
 
-memory :: IO Intcode.Memory
-memory = Intcode.parse <$> readFile "data/input05"
+program :: IO Intcode.Program
+program = Intcode.parse <$> readFile "data/input05"
 
 part1 :: IO Int
 part1 = do
-  m <- memory
-  last <$> Intcode.run m [1]
+  p <- program
+  last <$> Intcode.run p [1]
 
 part2 :: IO Int
 part2 = do
-  m <- memory
-  last <$> Intcode.run m [5]
+  p <- program
+  last <$> Intcode.run p [5]
 
 test :: IO ()
 test = defaultMain tests
@@ -28,8 +28,8 @@ tests =
   testGroup
     "day05"
     [ testCase "diagnostics" $ do
-        m <- memory
-        out <- Intcode.run m [1]
+        p <- program
+        out <- Intcode.run p [1]
         init out @?= [0, 0, 0, 0, 0, 0, 0, 0, 0]
     , testProperty "run 3,0,4,0,99" $
       monadicIO $ do
@@ -105,8 +105,8 @@ tests =
     , testProperty "sample input" $
       monadicIO $ do
         x <- pick arbitrary
-        m <- run $ Intcode.parse <$> readFile "data/test05"
-        out <- run $ Intcode.run m [x]
+        p <- run $ Intcode.parse <$> readFile "data/test05"
+        out <- run $ Intcode.run p [x]
         assert $
           out ==
           [ case compare x 8 of
