@@ -22,6 +22,7 @@ dependencies:
 - async
 - QuickCheck
 - array
+- sort
 
 library:
   source-dirs: src
