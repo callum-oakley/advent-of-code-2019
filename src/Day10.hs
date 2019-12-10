@@ -54,10 +54,8 @@ vaporised as =
   where
     (x0, y0) = station as
     order =
-      map snd .
-      sortOn fst .
-      concatMap (zipWith (\z a -> ((z, phase a), a)) [0 ..] . sortOn amplitude) .
-      groupSortOn phase (\_ a as -> a : as)
+      concat .
+      transpose . map (sortOn amplitude) . groupSortOn phase (\_ a as -> a : as)
 
 part2' :: [Asteroid] -> Integer
 part2' as = 100 * x + y
