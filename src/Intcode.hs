@@ -140,14 +140,14 @@ run' = do
     Halt -> return ()
 
 runDynamic :: Program -> (TQueue Int, TQueue Int) -> IO ()
-runDynamic m qs = do
-  runStateT (runReaderT run' qs) (0, 0, fromList (m <> replicate (2 ^ 8) 0))
+runDynamic p qs = do
+  runStateT (runReaderT run' qs) (0, 0, fromList (p <> replicate (2 ^ 8) 0))
   return ()
 
 run :: Program -> [Int] -> IO [Int]
-run m input = do
+run p input = do
   inQ <- newTQueueIO
   outQ <- newTQueueIO
   traverse_ (atomically . writeTQueue inQ) input
-  _ <- runDynamic m (inQ, outQ)
+  _ <- runDynamic p (inQ, outQ)
   atomically $ flushTQueue outQ

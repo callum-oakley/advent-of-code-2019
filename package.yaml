@@ -23,6 +23,7 @@ dependencies:
 - QuickCheck
 - array
 - sort
+- linear
 
 library:
   source-dirs: src
