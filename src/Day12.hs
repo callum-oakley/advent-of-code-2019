@@ -1,5 +1,6 @@
 module Day12 where
 
+import           Data.Maybe
 import           Linear.V3
 import           Test.Tasty
 import           Test.Tasty.HUnit
@@ -54,16 +55,17 @@ project i (Moon (V3 px py pz) (V3 vx vy vz)) =
     Z -> (pz, vz)
 
 part2' :: [Moon] -> Int
-part2' ms =
-  foldl1
-    lcm
-    [ fst .
-    head .
-    filter (\(_, ms') -> map (project axis) ms' == map (project axis) ms) .
-    tail . zip [0 ..] $
-    iterate step ms
-    | axis <- [X, Y, Z]
-    ]
+part2' ms = go Nothing Nothing Nothing 1 (step ms)
+  where
+    go (Just i) (Just j) (Just k) _ _ = foldl1 lcm [i, j, k]
+    go x y z i ms' =
+      go (f x X i ms') (f y Y i ms') (f z Z i ms') (i + 1) (step ms')
+    f a axis i ms' =
+      if isJust a
+        then a
+        else if map (project axis) ms' == map (project axis) ms
+               then Just i
+               else Nothing
 
 moons :: [Moon]
 moons =
