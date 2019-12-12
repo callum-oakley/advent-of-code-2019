@@ -12,6 +12,11 @@ data Moon =
   Moon Position Velocity
   deriving (Eq, Show)
 
+data Axis
+  = X
+  | Y
+  | Z
+
 gravity :: [Moon] -> [Moon]
 gravity ms = map gravity' ms
   where
@@ -41,30 +46,23 @@ totalEnergy m = potentialEnergy m * kineticEnergy m
 part1' :: [Moon] -> Int -> Int
 part1' ms n = sum . map totalEnergy $ iterate step ms !! n
 
-projectX (Moon (V3 px _ _) (V3 vx _ _)) = (px, vx)
+project :: Axis -> Moon -> (Int, Int)
+project i (Moon (V3 px py pz) (V3 vx vy vz)) =
+  case i of
+    X -> (px, vx)
+    Y -> (py, vy)
+    Z -> (pz, vz)
 
-projectY (Moon (V3 _ py _) (V3 _ vy _)) = (py, vy)
-
-projectZ (Moon (V3 _ _ pz) (V3 _ _ vz)) = (pz, vz)
-
+part2' :: [Moon] -> Int
 part2' ms =
   foldl1
     lcm
     [ fst .
-      head .
-      filter (\(_, ms') -> map projectX ms' == map projectX ms) .
-      tail . zip [0 ..] $
-      iterate step ms
-    , fst .
-      head .
-      filter (\(_, ms') -> map projectY ms' == map projectY ms) .
-      tail . zip [0 ..] $
-      iterate step ms
-    , fst .
-      head .
-      filter (\(_, ms') -> map projectZ ms' == map projectZ ms) .
-      tail . zip [0 ..] $
-      iterate step ms
+    head .
+    filter (\(_, ms') -> map (project axis) ms' == map (project axis) ms) .
+    tail . zip [0 ..] $
+    iterate step ms
+    | axis <- [X, Y, Z]
     ]
 
 moons :: [Moon]
@@ -77,6 +75,9 @@ moons =
 
 part1 :: Int
 part1 = part1' moons 1000
+
+part2 :: Int
+part2 = part2' moons
 
 testMoons1 :: [Moon]
 testMoons1 =
@@ -105,4 +106,8 @@ tests =
         part1' testMoons1 10 @?= 179
         part1' testMoons2 100 @?= 1940
     , testCase "part1" $ part1 @?= 7928
+    , testCase "part2'" $ do
+        part2' testMoons1 @?= 2772
+        part2' testMoons2 @?= 4686774924
+    , testCase "part2" $ part2 @?= 518311327635164
     ]
