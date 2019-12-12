@@ -1,6 +1,5 @@
 module Day12 where
 
-import           Data.Ord
 import           Linear.V3
 import           Test.Tasty
 import           Test.Tasty.HUnit
@@ -14,9 +13,9 @@ data Moon =
   deriving (Eq, Show)
 
 gravity :: [Moon] -> [Moon]
-gravity moons = map gravity' moons
+gravity ms = map gravity' ms
   where
-    gravity' (Moon p v) = Moon p (v + sum [delta p p' | (Moon p' _) <- moons])
+    gravity' (Moon p v) = Moon p (v + sum [delta p p' | (Moon p' _) <- ms])
     delta (V3 x y z) (V3 x' y' z') = V3 (pull x x') (pull y y') (pull z z')
     pull a b =
       case compare a b of
@@ -30,10 +29,54 @@ velocity = map (\(Moon p v) -> Moon (p + v) v)
 step :: [Moon] -> [Moon]
 step = velocity . gravity
 
-testMoons :: [Moon]
-testMoons =
+potentialEnergy :: Moon -> Int
+potentialEnergy (Moon p _) = sum $ fmap abs p
+
+kineticEnergy :: Moon -> Int
+kineticEnergy (Moon _ v) = sum $ fmap abs v
+
+totalEnergy :: Moon -> Int
+totalEnergy m = potentialEnergy m * kineticEnergy m
+
+part1' :: [Moon] -> Int -> Int
+part1' ms n = sum . map totalEnergy $ iterate step ms !! n
+
+moons :: [Moon]
+moons =
+  [ Moon (V3 5 (-1) 5) 0
+  , Moon (V3 0 (-14) 2) 0
+  , Moon (V3 16 4 0) 0
+  , Moon (V3 18 1 16) 0
+  ]
+
+part1 :: Int
+part1 = part1' moons 1000
+
+testMoons1 :: [Moon]
+testMoons1 =
   [ Moon (V3 (-1) 0 2) 0
   , Moon (V3 2 (-10) (-7)) 0
   , Moon (V3 4 (-8) 8) 0
   , Moon (V3 3 5 (-1)) 0
   ]
+
+testMoons2 :: [Moon]
+testMoons2 =
+  [ Moon (V3 (-8) (-10) 0) 0
+  , Moon (V3 5 5 10) 0
+  , Moon (V3 2 (-7) 3) 0
+  , Moon (V3 9 (-8) (-3)) 0
+  ]
+
+test :: IO ()
+test = defaultMain tests
+
+tests :: TestTree
+tests =
+  testGroup
+    "day12"
+    [ testCase "part1'" $ do
+        part1' testMoons1 10 @?= 179
+        part1' testMoons2 100 @?= 1940
+    , testCase "part1" $ part1 @?= 7928
+    ]
