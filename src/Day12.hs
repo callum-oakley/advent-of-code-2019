@@ -41,6 +41,32 @@ totalEnergy m = potentialEnergy m * kineticEnergy m
 part1' :: [Moon] -> Int -> Int
 part1' ms n = sum . map totalEnergy $ iterate step ms !! n
 
+projectX (Moon (V3 px _ _) (V3 vx _ _)) = (px, vx)
+
+projectY (Moon (V3 _ py _) (V3 _ vy _)) = (py, vy)
+
+projectZ (Moon (V3 _ _ pz) (V3 _ _ vz)) = (pz, vz)
+
+part2' ms =
+  foldl1
+    lcm
+    [ fst .
+      head .
+      filter (\(_, ms') -> map projectX ms' == map projectX ms) .
+      tail . zip [0 ..] $
+      iterate step ms
+    , fst .
+      head .
+      filter (\(_, ms') -> map projectY ms' == map projectY ms) .
+      tail . zip [0 ..] $
+      iterate step ms
+    , fst .
+      head .
+      filter (\(_, ms') -> map projectZ ms' == map projectZ ms) .
+      tail . zip [0 ..] $
+      iterate step ms
+    ]
+
 moons :: [Moon]
 moons =
   [ Moon (V3 5 (-1) 5) 0
