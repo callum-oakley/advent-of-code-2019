@@ -23,10 +23,10 @@ step (i, p) =
 run :: Program -> Program
 run p = go (0, p)
   where
-    go (i, p) =
-      case step (i, p) of
-        Just (i', p') -> go (i', p')
-        Nothing       -> p
+    go (i, q) =
+      case step (i, q) of
+        Just (i', q') -> go (i', q')
+        Nothing       -> q
 
 runWith :: Int -> Int -> Program -> Program
 runWith noun verb p = run (p // [(1, noun), (2, verb)])

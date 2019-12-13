@@ -1,16 +1,11 @@
 module Intcode
   ( parse
-  , runDynamic
   , run
   , Program
   ) where
 
-import           Control.Concurrent.STM
-import           Control.Monad.Reader
-import           Control.Monad.State
-import           Data.Foldable
 import           Data.List.Split
-import           Data.Vector            (Vector, fromList, (!), (//))
+import           Data.Vector     (Vector, fromList, (!), (//))
 
 type Program = [Int]
 
@@ -60,11 +55,11 @@ instruction i n =
     9  -> AdjustRelativeBase (param n 1)
     99 -> Halt
   where
-    param n m =
-      case n `div` (10 ^ (m + 1)) `mod` 10 of
-        0 -> Parameter Position (i + m)
-        1 -> Parameter Immediate (i + m)
-        2 -> Parameter Relative (i + m)
+    param m k =
+      case m `div` (10 ^ (k + 1)) `mod` 10 of
+        0 -> Parameter Position (i + k)
+        1 -> Parameter Immediate (i + k)
+        2 -> Parameter Relative (i + k)
 
 fetchVal :: Parameter -> RelativeBase -> Memory -> Int
 fetchVal p b m = m ! fetchAddr p b m
@@ -74,46 +69,38 @@ fetchAddr (Parameter Position i) _ m  = m ! i
 fetchAddr (Parameter Immediate i) _ _ = i
 fetchAddr (Parameter Relative i) b m  = b + m ! i
 
-run' :: ReaderT (TQueue Int, TQueue Int) (StateT Machine IO) ()
-run' = do
-  (i, b, m) <- get
+run' :: Machine -> [Int] -> [Int]
+run' (i, b, m) input =
   case instruction i $ m ! i of
-    Add p1 p2 p3 -> do
-      put
+    Add p1 p2 p3 ->
+      run'
         (i + 4, b, m // [(fetchAddr p3 b m, fetchVal p1 b m + fetchVal p2 b m)])
+        input
+    Multiply p1 p2 p3 ->
       run'
-    Multiply p1 p2 p3 -> do
-      put
         (i + 4, b, m // [(fetchAddr p3 b m, fetchVal p1 b m * fetchVal p2 b m)])
+        input
+    Receive p1 ->
+      run' (i + 2, b, m // [(fetchAddr p1 b m, head input)]) (tail input)
+    Send p1 -> fetchVal p1 b m : run' (i + 2, b, m) input
+    JumpIfTrue p1 p2 ->
       run'
-    Receive p1 -> do
-      inQ <- asks fst
-      input <- lift . lift . atomically . readTQueue $ inQ
-      put (i + 2, b, m // [(fetchAddr p1 b m, input)])
-      run'
-    Send p1 -> do
-      outQ <- asks snd
-      lift . lift . atomically . writeTQueue outQ $ fetchVal p1 b m
-      put (i + 2, b, m)
-      run'
-    JumpIfTrue p1 p2 -> do
-      put
         ( if fetchVal p1 b m /= 0
             then fetchVal p2 b m
             else i + 3
         , b
         , m)
+        input
+    JumpIfFalse p1 p2 ->
       run'
-    JumpIfFalse p1 p2 -> do
-      put
         ( if fetchVal p1 b m == 0
             then fetchVal p2 b m
             else i + 3
         , b
         , m)
+        input
+    LessThan p1 p2 p3 ->
       run'
-    LessThan p1 p2 p3 -> do
-      put
         ( i + 4
         , b
         , m //
@@ -122,9 +109,9 @@ run' = do
                 then 1
                 else 0)
           ])
+        input
+    Equal p1 p2 p3 ->
       run'
-    Equal p1 p2 p3 -> do
-      put
         ( i + 4
         , b
         , m //
@@ -133,21 +120,9 @@ run' = do
                 then 1
                 else 0)
           ])
-      run'
-    AdjustRelativeBase p1 -> do
-      put (i + 2, b + fetchVal p1 b m, m)
-      run'
-    Halt -> return ()
+        input
+    AdjustRelativeBase p1 -> run' (i + 2, b + fetchVal p1 b m, m) input
+    Halt -> []
 
-runDynamic :: Program -> (TQueue Int, TQueue Int) -> IO ()
-runDynamic p qs = do
-  runStateT (runReaderT run' qs) (0, 0, fromList (p <> replicate (2 ^ 8) 0))
-  return ()
-
-run :: Program -> [Int] -> IO [Int]
-run p input = do
-  inQ <- newTQueueIO
-  outQ <- newTQueueIO
-  traverse_ (atomically . writeTQueue inQ) input
-  _ <- runDynamic p (inQ, outQ)
-  atomically $ flushTQueue outQ
+run :: Program -> [Int] -> [Int]
+run p input = run' (0, 0, fromList (p <> replicate (2 ^ 8) 0)) input

@@ -1,11 +1,7 @@
 module Day11 where
 
-import           Control.Concurrent.Async
-import           Control.Concurrent.STM
-import           Control.Monad.Reader
-import           Control.Monad.State
-import           Data.Map.Strict          (Map, (!))
-import qualified Data.Map.Strict          as Map
+import           Data.Map.Strict  (Map, (!))
+import qualified Data.Map.Strict  as Map
 import           Linear.V2
 import           Test.Tasty
 import           Test.Tasty.HUnit
@@ -28,39 +24,35 @@ move turn (position, V2 x y) = (position + direction, direction)
         0 -> V2 y (-x)
         1 -> V2 (-y) x
 
-paint :: ReaderT (TQueue Int, TQueue Int, Async ()) (StateT (Hull, Robot) IO) ()
-paint = do
-  (inQ, outQ, brain) <- ask
-  done <- lift . lift $ poll brain
-  case done of
-    Just _ -> return ()
-    Nothing -> do
-      (hull, robot@(position, _)) <- get
-      lift . lift . atomically $
-        writeTQueue inQ (Map.findWithDefault 0 position hull)
-      colour <- lift . lift . atomically $ readTQueue outQ
-      turn <- lift . lift . atomically $ readTQueue outQ
-      put (Map.insert position colour hull, move turn robot)
-      paint
+paintingStates :: (Robot, Hull) -> [Int] -> [(Robot, Hull)]
+paintingStates (robot@(position, _), hull) instructions =
+  (robot, hull) :
+  case instructions of
+    (colour:turn:rest) ->
+      paintingStates (move turn robot, Map.insert position colour hull) rest
+    [] -> []
 
-runPaint :: Hull -> IO Hull
-runPaint hull = do
-  p <- program
-  inQ <- newTQueueIO
-  outQ <- newTQueueIO
-  brain <- async $ Intcode.runDynamic p (inQ, outQ)
-  fst <$>
-    execStateT (runReaderT paint (inQ, outQ, brain)) (hull, (0, V2 0 (-1)))
+paint' :: Intcode.Program -> Hull -> Hull
+paint' p hull = snd $ last states
+  where
+    states =
+      paintingStates ((0, V2 0 (-1)), hull) . Intcode.run p $ map colour states
+    colour ((position, _), h) = Map.findWithDefault 0 position h
 
 program :: IO Intcode.Program
 program = Intcode.parse <$> readFile "data/input11"
 
+paint :: Hull -> IO Hull
+paint hull = do
+  p <- program
+  return $ paint' p hull
+
 part1 :: IO Int
-part1 = Map.size <$> runPaint Map.empty
+part1 = Map.size <$> paint Map.empty
 
 part2' :: IO String
 part2' = do
-  hull <- runPaint (Map.singleton 0 1)
+  hull <- paint (Map.singleton 0 1)
   let blackSquares = filter (\pos -> hull ! pos == 1) $ Map.keys hull
   let xmin = minimum . map (\(V2 x _) -> x) $ blackSquares
   let xmax = maximum . map (\(V2 x _) -> x) $ blackSquares

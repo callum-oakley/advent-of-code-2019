@@ -8,6 +8,8 @@ copyright:           "2019 Callum Oakley"
 
 ghc-options:
 - -Wall
+- -Wno-incomplete-patterns
+- -Wno-type-defaults
 
 dependencies:
 - base >= 4.7 && < 5
