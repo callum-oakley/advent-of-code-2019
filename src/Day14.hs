@@ -138,7 +138,7 @@ testReactions =
 tests :: TestTree
 tests =
   testGroup
-    "day13"
+    "day14"
     [ testCase "part1'" $ do
         part1' (testReactions !! 0) @?= 31
         part1' (testReactions !! 1) @?= 165
