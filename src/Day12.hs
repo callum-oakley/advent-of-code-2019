@@ -60,12 +60,10 @@ part2' ms = go Nothing Nothing Nothing 1 (step ms)
     go (Just i) (Just j) (Just k) _ _ = foldl1 lcm [i, j, k]
     go x y z i ms' =
       go (f x X i ms') (f y Y i ms') (f z Z i ms') (i + 1) (step ms')
-    f a axis i ms' =
-      if isJust a
-        then a
-        else if map (project axis) ms' == map (project axis) ms
-               then Just i
-               else Nothing
+    f a axis i ms'
+      | isJust a = a
+      | map (project axis) ms' == map (project axis) ms = Just i
+      | otherwise = Nothing
 
 moons :: [Moon]
 moons =

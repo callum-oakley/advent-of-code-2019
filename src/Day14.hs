@@ -17,8 +17,7 @@ parse :: String -> Reactions
 parse =
   Map.fromList .
   map
-    ((\((c, n), r) -> (c, (Map.insert c (-n) r))) .
-     parseReaction . splitOn " => ") .
+    ((\((c, n), r) -> (c, Map.insert c (-n) r)) . parseReaction . splitOn " => ") .
   lines
   where
     parseReaction [reactants, products] =
@@ -35,10 +34,10 @@ reduce rs lab =
     lab' n chemical =
       Map.unionWith (+) lab . fmap (* applications n chemical) $ rs ! chemical
     applications n chemical =
-      ceiling $ (fromIntegral n / fromIntegral (-(rs ! chemical ! chemical)))
+      ceiling $ fromIntegral n / fromIntegral (-(rs ! chemical ! chemical))
 
 cost :: Reactions -> Int -> Int
-cost rs fuels = (reduce rs $ Map.singleton "FUEL" fuels) ! "ORE"
+cost rs fuels = reduce rs (Map.singleton "FUEL" fuels) ! "ORE"
 
 part1' :: Reactions -> Int
 part1' rs = cost rs 1
@@ -57,7 +56,7 @@ binarySearch f low high =
 part2' :: Reactions -> Int
 part2' rs = binarySearch f lowerBound (2 * lowerBound)
   where
-    f = (flip compare target) . cost rs
+    f = flip compare target . cost rs
     lowerBound = target `div` cost rs 1
     target = 1000000000000
 
@@ -139,16 +138,10 @@ tests :: TestTree
 tests =
   testGroup
     "day14"
-    [ testCase "part1'" $ do
-        part1' (testReactions !! 0) @?= 31
-        part1' (testReactions !! 1) @?= 165
-        part1' (testReactions !! 2) @?= 13312
-        part1' (testReactions !! 3) @?= 180697
-        part1' (testReactions !! 4) @?= 2210736
-    , testCase "part2'" $ do
-        part2' (testReactions !! 2) @?= 82892753
-        part2' (testReactions !! 3) @?= 5586022
-        part2' (testReactions !! 4) @?= 460664
+    [ testCase "part1'" . mapM_ (\(rs, expected) -> part1' rs @?= expected) $
+      zip testReactions [31, 165, 13312, 180697, 2210736]
+    , testCase "part2'" . mapM_ (\(rs, expected) -> part2' rs @?= expected) $
+      zip (drop 2 testReactions) [82892753, 5586022, 460664]
     , testCase "part1" $ do
         p1 <- part1
         p1 @?= 469536

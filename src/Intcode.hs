@@ -125,4 +125,4 @@ run' (i, b, m) input =
     Halt -> []
 
 run :: Program -> [Int] -> [Int]
-run p input = run' (0, 0, fromList (p <> replicate (2 ^ 8) 0)) input
+run p = run' (0, 0, fromList (p <> replicate (2 ^ 8) 0))

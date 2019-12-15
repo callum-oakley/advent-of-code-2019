@@ -1,3 +1,5 @@
+{-# LANGUAGE TupleSections #-}
+
 module Day15 where
 
 import           Data.Map.Strict  (Map, (!))
@@ -68,10 +70,10 @@ flood m = go (Map.singleton (findTile m OxygenSystem) 0) 1
     go ts t =
       case boundary ts of
         [] -> ts
-        bs -> go (Map.union (Map.fromList $ map (\b -> (b, t)) bs) ts) (t + 1)
+        bs -> go (Map.union (Map.fromList $ map (, t) bs) ts) (t + 1)
     boundary ts =
       filter
-        (\pos -> Map.notMember pos ts && any (flip Map.member ts) (adjacent pos)) $
+        (\pos -> Map.notMember pos ts && any (`Map.member` ts) (adjacent pos)) $
       Map.keys m
     adjacent (V2 x y) = [V2 (x + 1) y, V2 x (y + 1), V2 (x - 1) y, V2 x (y - 1)]
 
@@ -81,12 +83,10 @@ program = Intcode.parse <$> readFile "data/input15"
 part1 :: IO Int
 part1 = do
   m <- explore <$> program
-  return $ (flood m) ! (findTile m Origin)
+  return $ flood m ! findTile m Origin
 
 part2 :: IO Int
-part2 = do
-  m <- explore <$> program
-  return $ maximum (flood m)
+part2 = maximum . flood . explore <$> program
 
 plot :: Map (V2 Int) Tile -> IO ()
 plot m = do
