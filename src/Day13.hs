@@ -1,26 +1,31 @@
 module Day13 where
 
 import           Data.List.Split
-import           Data.Maybe
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
 import qualified Intcode
 
-play :: Intcode.Program -> Int
-play p = last . map (!! 2) . filter (\[x, y, _] -> x == -1 && y == 0) $ output
+readChunksOf :: Int -> Intcode.Effect -> ([Int], Intcode.Effect)
+readChunksOf 0 c = ([], c)
+readChunksOf n c = (o : os, c'')
   where
-    output = chunksOf 3 $ Intcode.run p input
-    input = mapMaybe snd $ scanl step (Nothing, Nothing) output
-    step (paddleX, _) [x, _, tile] =
-      case tile of
-        3 -> (Just x, Nothing)
-        4 ->
-          ( paddleX
-          , case paddleX of
-              Just paddleX' -> Just . signum $ x - paddleX'
-              Nothing       -> Just 0)
-        _ -> (paddleX, Nothing)
+    (o, c') = Intcode.expectOutput c
+    (os, c'') = readChunksOf (n - 1) c'
+
+play :: Intcode.Program -> Int
+play p = go (Intcode.runDynamic p) 0 0 0
+  where
+    go c paddleX ballX score =
+      case c of
+        Intcode.Input f -> go (f . signum $ ballX - paddleX) paddleX ballX score
+        Intcode.Output _ _ ->
+          case readChunksOf 3 c of
+            ([-1, 0, z], c') -> go c' paddleX ballX z
+            ([x, _, 3], c')  -> go c' x ballX score
+            ([x, _, 4], c')  -> go c' paddleX x score
+            (_, c')          -> go c' paddleX ballX score
+        Intcode.Stop -> score
 
 program :: IO Intcode.Program
 program = Intcode.parse <$> readFile "data/input13"

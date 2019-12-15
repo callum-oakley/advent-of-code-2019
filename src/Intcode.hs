@@ -1,7 +1,11 @@
 module Intcode
   ( parse
   , run
+  , runDynamic
+  , expectInput
+  , expectOutput
   , Program
+  , Effect(..)
   ) where
 
 import           Data.List.Split
@@ -14,6 +18,11 @@ type Memory = Vector Int
 type RelativeBase = Int
 
 type Machine = (Int, RelativeBase, Memory)
+
+data Effect
+  = Input (Int -> Effect)
+  | Output Int Effect
+  | Stop
 
 data Mode
   = Position
@@ -69,20 +78,18 @@ fetchAddr (Parameter Position i) _ m  = m ! i
 fetchAddr (Parameter Immediate i) _ _ = i
 fetchAddr (Parameter Relative i) b m  = b + m ! i
 
-run' :: Machine -> [Int] -> [Int]
-run' (i, b, m) input =
+run' :: Machine -> Effect
+run' (i, b, m) =
   case instruction i $ m ! i of
     Add p1 p2 p3 ->
       run'
         (i + 4, b, m // [(fetchAddr p3 b m, fetchVal p1 b m + fetchVal p2 b m)])
-        input
     Multiply p1 p2 p3 ->
       run'
         (i + 4, b, m // [(fetchAddr p3 b m, fetchVal p1 b m * fetchVal p2 b m)])
-        input
     Receive p1 ->
-      run' (i + 2, b, m // [(fetchAddr p1 b m, head input)]) (tail input)
-    Send p1 -> fetchVal p1 b m : run' (i + 2, b, m) input
+      Input (\input -> run' (i + 2, b, m // [(fetchAddr p1 b m, input)]))
+    Send p1 -> Output (fetchVal p1 b m) (run' (i + 2, b, m))
     JumpIfTrue p1 p2 ->
       run'
         ( if fetchVal p1 b m /= 0
@@ -90,7 +97,6 @@ run' (i, b, m) input =
             else i + 3
         , b
         , m)
-        input
     JumpIfFalse p1 p2 ->
       run'
         ( if fetchVal p1 b m == 0
@@ -98,7 +104,6 @@ run' (i, b, m) input =
             else i + 3
         , b
         , m)
-        input
     LessThan p1 p2 p3 ->
       run'
         ( i + 4
@@ -109,7 +114,6 @@ run' (i, b, m) input =
                 then 1
                 else 0)
           ])
-        input
     Equal p1 p2 p3 ->
       run'
         ( i + 4
@@ -120,9 +124,25 @@ run' (i, b, m) input =
                 then 1
                 else 0)
           ])
-        input
-    AdjustRelativeBase p1 -> run' (i + 2, b + fetchVal p1 b m, m) input
-    Halt -> []
+    AdjustRelativeBase p1 -> run' (i + 2, b + fetchVal p1 b m, m)
+    Halt -> Stop
+
+runDynamic :: Program -> Effect
+runDynamic p = run' (0, 0, fromList (p <> replicate (2 ^ 8) 0))
 
 run :: Program -> [Int] -> [Int]
-run p = run' (0, 0, fromList (p <> replicate (2 ^ 8) 0))
+run p = go (runDynamic p)
+  where
+    go (Input f) (i:input) = go (f i) input
+    go (Output o e) input  = o : go e input
+    go Stop _              = []
+
+-- Partial function for ergonomics when we know a priori that our machine is
+-- expecting an input.
+expectInput :: Effect -> Int -> Effect
+expectInput (Input f) = f
+
+-- Partial function for ergonomics when we know a priori that our machine is
+-- expecting an output.
+expectOutput :: Effect -> (Int, Effect)
+expectOutput (Output o e) = (o, e)

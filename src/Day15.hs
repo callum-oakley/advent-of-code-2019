@@ -13,59 +13,42 @@ import qualified Intcode
 data Tile
   = Origin
   | Empty
-  | OxygenSystem
+  | Oxygen
   | Wall
   deriving (Show, Eq)
 
-type Droid = (V2 Int, V2 Int, Map (V2 Int) Tile)
-
 type Seconds = Int
 
-hugWall :: V2 Int -> V2 Int -> [Int] -> [Droid]
-hugWall initialPos initialDir initialInput =
-  head states :
-  takeWhile
-    (\(pos, dir, _) -> (pos, dir) /= (initialPos, initialDir))
-    (tail states)
+hugWall :: Intcode.Effect -> V2 Int -> V2 Int -> Map (V2 Int) Tile
+hugWall computer' pos' dir' =
+  go computer' pos' dir' (Map.singleton pos' Origin) True
   where
-    states = go initialPos initialDir (Map.singleton 0 Origin) initialInput
-    go pos dir m input =
-      (pos, dir, m) :
-      case head input of
-        0 -> go pos (turnR dir) m (tail input)
-        1 ->
-          go
-            (pos + dir)
-            (turnL dir)
-            (Map.insertWith (flip const) (pos + dir) Empty m)
-            (tail input)
-        2 ->
-          go
-            (pos + dir)
-            (turnL dir)
-            (Map.insertWith (flip const) (pos + dir) OxygenSystem m)
-            (tail input)
+    go computer pos dir m first
+      | (pos, dir, first) == (pos', dir', False) = m
+      | otherwise =
+        case Intcode.expectInput computer $ encodeInput dir of
+          (Intcode.Output 0 c) -> go c pos (turnR dir) m False
+          (Intcode.Output 1 c) ->
+            go c (pos + dir) (turnL dir) (insert (pos + dir) Empty m) False
+          (Intcode.Output 2 c) ->
+            go c (pos + dir) (turnL dir) (insert (pos + dir) Oxygen m) False
+    insert = Map.insertWith (flip const)
     turnR (V2 x y) = V2 (-y) x
     turnL (V2 x y) = V2 y (-x)
-
-explore :: Intcode.Program -> Map (V2 Int) Tile
-explore p = m
-  where
-    output = Intcode.run p input
-    droidStates = hugWall 0 (V2 0 (-1)) output
-    input = map (\(_, dir, _) -> encodeInput dir) droidStates
-    (_, _, m) = last droidStates
     encodeInput (V2 0 (-1)) = 1
     encodeInput (V2 0 1)    = 2
     encodeInput (V2 (-1) 0) = 3
     encodeInput (V2 1 0)    = 4
+
+explore :: Intcode.Program -> Map (V2 Int) Tile
+explore p = hugWall (Intcode.runDynamic p) 0 (V2 0 (-1))
 
 findTile :: Map (V2 Int) Tile -> Tile -> V2 Int
 findTile m tile =
   fst . head . filter (\(_, tile') -> tile' == tile) $ Map.assocs m
 
 flood :: Map (V2 Int) Tile -> Map (V2 Int) Seconds
-flood m = go (Map.singleton (findTile m OxygenSystem) 0) 1
+flood m = go (Map.singleton (findTile m Oxygen) 0) 1
   where
     go ts t =
       case boundary ts of
@@ -101,10 +84,10 @@ plot m = do
       ]
   where
     plotRow = concatMap plotTile
-    plotTile Origin       = " O "
-    plotTile Empty        = " · "
-    plotTile Wall         = "███"
-    plotTile OxygenSystem = " X "
+    plotTile Origin = " O "
+    plotTile Empty  = " · "
+    plotTile Wall   = "███"
+    plotTile Oxygen = " X "
 
 test :: IO ()
 test = defaultMain tests
