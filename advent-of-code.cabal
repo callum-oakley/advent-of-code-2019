@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: db88ccd4ecc97e7047afd65d2b4fe5417f9282014e867adfec0ed7997d115ede
+-- hash: 69e95c1d63b1c14f9967fb6943f4b23a01a771ec3011e9828a7843283ba13829
 
 name:           advent-of-code
 version:        0.1.0.0
@@ -43,7 +43,7 @@ library
       Paths_advent_of_code
   hs-source-dirs:
       src
-  ghc-options: -Wall -Wno-incomplete-patterns -Wno-type-defaults -fobject-code -O2
+  ghc-options: -Wall -Wno-incomplete-patterns -Wno-type-defaults -fobject-code -O
   build-depends:
       QuickCheck
     , array
@@ -68,7 +68,7 @@ test-suite advent-of-code-test
       Paths_advent_of_code
   hs-source-dirs:
       test
-  ghc-options: -Wall -Wno-incomplete-patterns -Wno-type-defaults -fobject-code -O2
+  ghc-options: -Wall -Wno-incomplete-patterns -Wno-type-defaults -fobject-code -O
   build-depends:
       QuickCheck
     , advent-of-code
