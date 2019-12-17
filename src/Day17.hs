@@ -2,6 +2,8 @@ module Day17 where
 
 import           Data.Char
 import           Data.Foldable
+import           Data.List
+import           Data.List.Split
 import           Data.Maybe
 import           Data.Set         (Set)
 import qualified Data.Set         as Set
@@ -18,12 +20,6 @@ type Position = V2 Int
 type Scaffolding = Set (V2 Int)
 
 type Robot = (Position, Direction)
-
-data SimpleMovement
-  = F
-  | L
-  | R
-  deriving (Show)
 
 parseAscii :: String -> (Scaffolding, Robot)
 parseAscii ascii =
@@ -49,19 +45,54 @@ calibrate s = sum . Set.map product $ Set.filter isIntersection s
         (\dir -> (pos + dir) `Set.member` s)
         [V2 0 (-1), V2 0 1, V2 (-1) 0, V2 1 0]
 
-walk :: Scaffolding -> Robot -> [SimpleMovement]
-walk s (rpos, rdir) =
-  replicate forwardSteps F <>
+walk :: (Scaffolding, Robot) -> String
+walk (s, (rpos, rdir)) =
+  replicate forwardSteps 'F' <>
   case turn of
-    Just t  -> t : walk s (rpos', rotate t rdir)
+    Just t  -> t : walk (s, (rpos', rotate t rdir))
     Nothing -> []
   where
     forwardSteps =
       length $ takeWhile (\f -> (rpos + fmap (f *) rdir) `Set.member` s) [1 ..]
     rpos' = rpos + fmap (forwardSteps *) rdir
-    turn = find (\t -> (rpos' + rotate t rdir) `Set.member` s) [L, R]
-    rotate L (V2 x y) = V2 y (-x)
-    rotate R (V2 x y) = V2 (-y) x
+    turn = find (\t -> (rpos' + rotate t rdir) `Set.member` s) ['L', 'R']
+    rotate 'L' (V2 x y) = V2 y (-x)
+    rotate 'R' (V2 x y) = V2 (-y) x
+
+shorten :: String -> String
+shorten =
+  intercalate "," .
+  map
+    (\g ->
+       if head g == 'F'
+         then show (length g)
+         else g) .
+  group
+
+compressions :: Int -> [String] -> [[String]]
+compressions 0 [] = [[]]
+compressions _ [] = []
+compressions 0 _ = []
+compressions n ss@(s:_) =
+  [ subsequence : c
+  | m <- [2 .. length s]
+  , let subsequence = take m s
+  , length (shorten subsequence) <= 20
+  , let ss' = concatMap (splitter subsequence) ss
+  , c <- compressions (n - 1) ss'
+  ]
+  where
+    splitter = split . dropBlanks . dropDelims . onSublist
+
+compress :: String -> (String, String, String, String)
+compress s = (compressWith compression, a, b, c)
+  where
+    compression =
+      head . filter ((<= 20) . length . compressWith) $ compressions 3 [s]
+    [a, b, c] = map shorten compression
+    sub x y = intercalate y . splitOn x
+    compressWith [aLong, bLong, cLong] =
+      intersperse ',' . sub cLong "C" . sub bLong "B" . sub aLong "A" $ s
 
 program :: IO Intcode.Program
 program = Intcode.parse <$> readFile "data/input17"
@@ -72,19 +103,6 @@ part1 = do
   let ascii = map chr $ Intcode.run p []
   pure . calibrate . fst $ parseAscii ascii
 
-{-
-Solution found by inspecting the output of walk (above) to find the largest
-repeating patterns.
-
-Main:
-A,C,A,C,B,B,C,A,C,B
-Function A:
-L,4,R,8,L,6,L,10
-Function B:
-L,4,L,4,L,10
-Function C:
-L,6,R,8,R,10,L,6,L,6
--}
 part2Interactive :: IO ()
 part2Interactive = do
   p <- program
@@ -100,14 +118,10 @@ part2Interactive = do
 part2 :: IO Int
 part2 = do
   p <- program
+  let (main, a, b, c) =
+        compress . walk . parseAscii . map chr $ Intcode.run p []
   pure . last . Intcode.run (2 : tail p) . map ord $
-    unlines
-      [ "A,C,A,C,B,B,C,A,C,B"
-      , "L,4,R,8,L,6,L,10"
-      , "L,4,L,4,L,10"
-      , "L,6,R,8,R,10,L,6,L,6"
-      , "n"
-      ]
+    unlines [main, a, b, c, "n"]
 
 testInput :: String
 testInput =
