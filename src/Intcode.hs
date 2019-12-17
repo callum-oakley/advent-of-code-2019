@@ -128,7 +128,7 @@ run' (i, b, m) =
     Halt -> Stop
 
 runDynamic :: Program -> Effect
-runDynamic p = run' (0, 0, fromList (p <> replicate (2 ^ 8) 0))
+runDynamic p = run' (0, 0, fromList (p <> replicate (2 ^ 11) 0))
 
 run :: Program -> [Int] -> [Int]
 run p = go (runDynamic p)
