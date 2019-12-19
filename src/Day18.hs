@@ -1,4 +1,3 @@
-{-# LANGUAGE NamedFieldPuns  #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Day18 where
@@ -7,14 +6,12 @@ import           Data.Char
 import           Data.Foldable
 import           Data.Map.Strict  (Map)
 import qualified Data.Map.Strict  as Map
-import           Data.Maybe
 import           Data.Sequence    (Seq ((:<|)), (><))
 import qualified Data.Sequence    as Seq
 import           Data.Set         (Set)
 import qualified Data.Set         as Set
 import           Data.Vector      (Vector, (//))
 import qualified Data.Vector      as Vector
-import           Debug.Trace
 import           Linear.V2
 import           Test.Tasty
 import           Test.Tasty.HUnit
@@ -28,18 +25,12 @@ data Tile
 
 type Maze = Map (V2 Int) Tile
 
-data Robot =
-  Robot
-    { position :: V2 Int
-    , steps    :: Int
-    }
-  deriving (Show)
-
 data State =
   State
-    { robots   :: Vector (Robot)
-    , keys     :: Set Char
-    , lastMove :: Maybe Robot
+    { robots :: Vector (V2 Int)
+    , keys   :: Set Char
+    , steps  :: Int
+    , moving :: Maybe Int
     }
   deriving (Show)
 
@@ -62,63 +53,56 @@ parse = Map.fromList . concatMap parseLine . zip [0 ..] . lines
       | isLower c = Key c
       | isUpper c = Door $ toLower c
 
-breadthFirst :: (State -> [State]) -> State -> [State]
-breadthFirst step start = go Map.empty (Seq.singleton start)
+breadthFirst :: Ord r => (a -> r) -> (a -> [a]) -> a -> [a]
+breadthFirst rep reachable start =
+  go (Set.singleton $ rep start) (Seq.singleton start)
   where
     go _ Seq.Empty = []
     go seen (x :<| xs) =
       x :
-      go
-        (Map.union
-           (Map.fromList $
-            map
-              (\State {..} ->
-                 ( (position $ fromJust lastMove, keys)
-                 , steps $ fromJust lastMove))
-              ys)
-           seen)
-        (xs >< Seq.fromList ys)
+      go (Set.union (Set.fromList $ map rep ys) seen) (xs >< Seq.fromList ys)
       where
-        ys =
-          filter
-            (\State {..} ->
-               isJust lastMove &&
-               (Map.notMember (position $ fromJust lastMove, keys) seen ||
-                seen Map.! (position $ fromJust lastMove, keys) >
-                steps (fromJust lastMove))) $
-          step x
+        ys = filter (\y -> Set.notMember (rep y) seen) $ reachable x
 
 moves :: Maze -> State -> [State]
 moves maze State {..} =
   [ State
-    {robots = robots // [(i, robot')], keys = keys', lastMove = Just robot'}
-  | (i, robot) <- toList $ Vector.indexed robots
+    { robots = robots // [(i, robot')]
+    , keys = keys'
+    , steps = steps + 1
+    , moving = moving'
+    }
+  | (i, robot) <-
+      case moving of
+        Just i  -> pure (i, robots Vector.! i)
+        Nothing -> toList $ Vector.indexed robots
   , dir <- [V2 1 0, V2 0 1, V2 (-1) 0, V2 0 (-1)]
-  , let robot' =
-          Robot {position = position robot + dir, steps = steps robot + 1}
-  , Map.member (position robot') maze
-  , let tile = maze Map.! (position robot')
+  , let robot' = robot + dir
+  , Map.member robot' maze
+  , let tile = maze Map.! robot'
   , case tile of
       Door key -> Set.member key keys
       _        -> True
-  , let keys' =
+  , let (keys', moving') =
           case tile of
-            Key key -> Set.insert key keys
-            _       -> keys
+            Key key ->
+              if Set.member key keys
+                then (keys, Just i)
+                else (Set.insert key keys, Nothing)
+            _ -> (keys, Just i)
   ]
 
 fewestSteps :: Maze -> Int
 fewestSteps maze =
-  sum .
-  fmap steps . robots . head . filter (\State {..} -> Set.size keys == nKeys) $
+  steps . head . filter (\State {..} -> Set.size keys == nKeys) $
   breadthFirst
+    (\State {..} -> (robots, keys))
     (moves maze)
     (State
-       { robots =
-           Vector.fromList . map (\position -> Robot {position, steps = 0}) $
-           findTiles maze (== Entrance)
+       { robots = Vector.fromList $ findTiles maze (== Entrance)
        , keys = Set.empty
-       , lastMove = Nothing
+       , steps = 0
+       , moving = Nothing
        })
   where
     nKeys = Map.size $ Map.filter isKey maze
@@ -139,6 +123,7 @@ part2' s = fewestSteps $ Map.mapMaybeWithKey f maze
 part1 :: IO Int
 part1 = part1' <$> readFile "data/input18"
 
+-- This gets the right answer but it takes a pretty long time...
 part2 :: IO Int
 part2 = part2' <$> readFile "data/input18"
 
@@ -235,4 +220,7 @@ tests =
     , testCase "part1" $ do
         p1 <- part1
         p1 @?= 3546
+    , testCase "part2" $ do
+        p2 <- part2
+        p2 @?= 1988
     ]
