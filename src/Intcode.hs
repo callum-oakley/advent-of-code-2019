@@ -2,12 +2,15 @@ module Intcode
   ( parse
   , run
   , runDynamic
+  , runInteractive
+  , runInteractiveAscii
   , expectInput
   , expectOutput
   , Program
   , Effect(..)
   ) where
 
+import           Data.Char
 import           Data.List.Split
 import           Data.Vector     (Vector, fromList, (!), (//))
 
@@ -136,6 +139,23 @@ run p = go (runDynamic p)
     go (Input f) (i:input) = go (f i) input
     go (Output o e) input  = o : go e input
     go Stop _              = []
+
+runInteractive :: Program -> IO ()
+runInteractive = go . runDynamic
+  where
+    go (Input f)     = getLine >>= go . f . read
+    go (Output o c') = print o >> go c'
+    go Stop          = pure ()
+
+runInteractiveAscii :: Program -> IO ()
+runInteractiveAscii = go . runDynamic
+  where
+    go (Input f)     = getChar >>= go . f . ord
+    go (Output o c') = putStr (display o) >> go c'
+    go Stop          = pure ()
+    display o
+      | isAscii $ chr o = [chr o]
+      | otherwise = show o
 
 -- Partial function for ergonomics when we know a priori that our machine is
 -- expecting an input.

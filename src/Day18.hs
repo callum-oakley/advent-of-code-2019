@@ -123,7 +123,6 @@ part2' s = fewestSteps $ Map.mapMaybeWithKey f maze
 part1 :: IO Int
 part1 = part1' <$> readFile "data/input18"
 
--- This gets the right answer but it takes a pretty long time...
 part2 :: IO Int
 part2 = part2' <$> readFile "data/input18"
 
@@ -217,10 +216,11 @@ tests =
         [8, 86, 132, 136, 81]
     , testCase "part2'" . sequence_ $
       zipWith (\s expected -> part2' s @?= expected) testData2 [8, 24, 32, 72]
-    , testCase "part1" $ do
-        p1 <- part1
-        p1 @?= 3546
-    , testCase "part2" $ do
-        p2 <- part2
-        p2 @?= 1988
+    -- TODO optimise. Part 1 and 2 take 104.46s and 496.06s at time of writing.
+    -- , testCase "part1" $ do
+    --     p1 <- part1
+    --     p1 @?= 3546
+    -- , testCase "part2" $ do
+    --     p2 <- part2
+    --     p2 @?= 1988
     ]

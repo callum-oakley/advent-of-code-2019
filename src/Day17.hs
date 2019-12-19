@@ -103,18 +103,6 @@ part1 = do
   let ascii = map chr $ Intcode.run p []
   pure . calibrate . fst $ parseAscii ascii
 
-part2Interactive :: IO ()
-part2Interactive = do
-  p <- program
-  go . Intcode.runDynamic $ 2 : tail p
-  where
-    go (Intcode.Input f)     = getChar >>= go . f . ord
-    go (Intcode.Output o c') = putStr (display o) >> go c'
-    go Intcode.Stop          = pure ()
-    display o
-      | isAscii $ chr o = [chr o]
-      | otherwise = show o
-
 part2 :: IO Int
 part2 = do
   p <- program
