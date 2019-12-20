@@ -6,8 +6,6 @@ import           Data.Char
 import           Data.Foldable
 import           Data.Map.Strict  (Map)
 import qualified Data.Map.Strict  as Map
-import           Data.Sequence    (Seq ((:<|)), (><))
-import qualified Data.Sequence    as Seq
 import           Data.Set         (Set)
 import qualified Data.Set         as Set
 import           Data.Vector      (Vector, (//))
@@ -15,6 +13,8 @@ import qualified Data.Vector      as Vector
 import           Linear.V2
 import           Test.Tasty
 import           Test.Tasty.HUnit
+
+import qualified Search
 
 data Tile
   = Empty
@@ -53,17 +53,6 @@ parse = Map.fromList . concatMap parseLine . zip [0 ..] . lines
       | isLower c = Key c
       | isUpper c = Door $ toLower c
 
-breadthFirst :: Ord r => (a -> r) -> (a -> [a]) -> a -> [a]
-breadthFirst rep reachable start =
-  go (Set.singleton $ rep start) (Seq.singleton start)
-  where
-    go _ Seq.Empty = []
-    go seen (x :<| xs) =
-      x :
-      go (Set.union (Set.fromList $ map rep ys) seen) (xs >< Seq.fromList ys)
-      where
-        ys = filter (\y -> Set.notMember (rep y) seen) $ reachable x
-
 moves :: Maze -> State -> [State]
 moves maze State {..} =
   [ State
@@ -95,7 +84,7 @@ moves maze State {..} =
 fewestSteps :: Maze -> Int
 fewestSteps maze =
   steps . head . filter (\State {..} -> Set.size keys == nKeys) $
-  breadthFirst
+  Search.breadthFirst
     (\State {..} -> (robots, keys))
     (moves maze)
     (State
