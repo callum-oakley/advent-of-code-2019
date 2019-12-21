@@ -154,7 +154,7 @@ runInteractiveAscii = go . runDynamic
     go (Output o c') = putStr (display o) >> go c'
     go Stop          = pure ()
     display o
-      | isAscii $ chr o = [chr o]
+      | o <= 128 = [chr o]
       | otherwise = show o
 
 -- Partial function for ergonomics when we know a priori that our machine is
