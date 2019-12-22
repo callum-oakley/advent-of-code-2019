@@ -28,6 +28,7 @@ dependencies:
 - array
 - sort
 - linear
+- parsec
 
 library:
   source-dirs: src

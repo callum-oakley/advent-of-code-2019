@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 80626c55f0ef80bbb88b1d968c155c87c087ae03e0cc931edddeb29c13f3cb36
+-- hash: 039b7b0cdcd666b2afa9f84125df96bc4567f55b858c1a1f06bdd3ee204af08e
 
 name:           advent-of-code
 version:        0.1.0.0
@@ -43,6 +43,7 @@ library
       Day19
       Day20
       Day21
+      Day22
       Intcode
       Search
   other-modules:
@@ -58,6 +59,7 @@ library
     , containers
     , linear
     , mtl
+    , parsec
     , sort
     , split
     , stm
@@ -84,6 +86,7 @@ test-suite advent-of-code-test
     , containers
     , linear
     , mtl
+    , parsec
     , sort
     , split
     , stm
