@@ -29,6 +29,7 @@ dependencies:
 - sort
 - linear
 - parsec
+- groups
 
 library:
   source-dirs: src

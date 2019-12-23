@@ -1,10 +1,17 @@
+{-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE KindSignatures   #-}
+{-# LANGUAGE TypeApplications #-}
+
 module Day22 where
 
 import           Control.Monad
 import           Data.Either
 import           Data.Functor
+import           Data.Group
 import           Data.List
 import           Data.Maybe
+import           Data.Ratio
+import           GHC.TypeLits         hiding (Mod)
 import           Test.Tasty
 import           Test.Tasty.HUnit
 import           Text.Parsec          (Parsec, (<|>))
@@ -12,14 +19,47 @@ import qualified Text.Parsec          as Parsec
 import qualified Text.Parsec.Language as Parsec
 import qualified Text.Parsec.Token    as Parsec
 
+newtype Mod (m :: Nat) =
+  Mod Integer
+  deriving (Show, Eq)
+
+unMod :: Mod (m :: Nat) -> Integer
+unMod (Mod n) = n
+
+instance KnownNat m => Num (Mod m) where
+  fromInteger x = y
+    where
+      y = Mod $ x `mod` natVal y
+  (Mod x) + (Mod y) = fromInteger $ x + y
+  (Mod x) * (Mod y) = fromInteger $ x * y
+  (Mod x) - (Mod y) = fromInteger $ x - y
+  abs = id
+  signum = const 1
+
+instance KnownNat m => Fractional (Mod m) where
+  recip x = x ^ (natVal x - 2) -- True for prime m by Fermat's little theorem
+  fromRational x = fromInteger (numerator x) / fromInteger (denominator x)
+
+data Shuffle (m :: Nat) =
+  Shuffle (Mod m) (Mod m) -- Shuffle a b represents a linear function \x -> a x + b
+  deriving (Show)
+
+base :: KnownNat m => Shuffle m -> Integer
+base (Shuffle a _) = natVal a
+
+instance KnownNat m => Semigroup (Shuffle m) where
+  (Shuffle a b) <> (Shuffle c d) = Shuffle (c * a) (c * b + d)
+
+instance KnownNat m => Monoid (Shuffle m) where
+  mempty = Shuffle 1 0
+
+instance KnownNat m => Group (Shuffle m) where
+  invert (Shuffle a b) = Shuffle (1 / a) (-b / a)
+
 data Technique
   = DealIntoNewStack
   | Cut Integer
   | DealWithIncrement Integer
-  deriving (Show)
-
-data Shuffle =
-  Shuffle Integer Integer -- Shuffle a b represents a linear function \x -> a x + b
   deriving (Show)
 
 parseTechnique :: Parsec String () Technique
@@ -31,73 +71,37 @@ parseTechnique =
   where
     integer = Parsec.integer Parsec.haskell
 
-fromTechnique :: Technique -> Shuffle
+fromTechnique :: KnownNat m => Technique -> Shuffle m
 fromTechnique DealIntoNewStack      = Shuffle (-1) (-1)
-fromTechnique (Cut n)               = Shuffle 1 (-n)
-fromTechnique (DealWithIncrement n) = Shuffle n 0
+fromTechnique (Cut n)               = Shuffle 1 (-fromInteger n)
+fromTechnique (DealWithIncrement n) = Shuffle (fromInteger n) 0
 
-compose :: Integer -> Shuffle -> Shuffle -> Shuffle
-compose deckSize (Shuffle a b) (Shuffle c d) =
-  Shuffle ((c * a) `mod` deckSize) ((c * b + d) `mod` deckSize)
-
-parse :: Integer -> String -> Shuffle
-parse deckSize =
-  foldr1 (compose deckSize) .
+parse :: KnownNat m => String -> Shuffle m
+parse =
+  mconcat .
   map fromTechnique . rights . map (Parsec.parse parseTechnique "") . lines
 
-apply :: Integer -> Shuffle -> Integer -> Integer
-apply deckSize (Shuffle a b) card = (a * card + b) `mod` deckSize
-
--- https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm
-modInv :: Integer -> Integer -> Integer
-modInv n m = go 0 1 m n
-  where
-    go t _ _ 0 =
-      if t < 0
-        then t + m
-        else t
-    go t t' r r' = go t' (t - q * t') r' (r - q * r')
-      where
-        q = r `div` r'
-
-inverse :: Integer -> Shuffle -> Shuffle
-inverse deckSize (Shuffle a b) = Shuffle a' (-b * a' `mod` deckSize)
-  where
-    a' = modInv a deckSize
-
-pow :: Integer -> Shuffle -> Integer -> Shuffle
-pow _ _ 0 = Shuffle 1 0
-pow _ shuffle 1 = shuffle
-pow deckSize shuffle k
-  | k < 0 = pow deckSize (inverse deckSize shuffle) (-k)
-  | otherwise =
-    if even k
-      then compose deckSize shuffle' shuffle'
-      else compose deckSize shuffle' (compose deckSize shuffle shuffle')
-  where
-    shuffle' = pow deckSize shuffle (k `div` 2)
+apply :: KnownNat m => Shuffle m -> Mod m -> Mod m
+apply (Shuffle a b) card = a * card + b
 
 part1 :: IO Integer
 part1 = do
-  shuffle <- parse deckSize <$> readFile "data/input22"
-  pure $ apply deckSize shuffle 2019
-  where
-    deckSize = 10007
+  shuffle <- parse <$> readFile "data/input22"
+  pure . unMod $ apply @10007 shuffle 2019
 
 part2 :: IO Integer
 part2 = do
-  firstPass <- parse deckSize <$> readFile "data/input22"
-  let shuffle = pow deckSize firstPass (-101741582076661)
-  pure $ apply deckSize shuffle 2020
-  where
-    deckSize = 119315717514047
+  shuffle <- parse <$> readFile "data/input22"
+  pure . unMod $ apply @119315717514047 (pow shuffle (-101741582076661)) 2020
 
 -- just for testing
-simulateFullShuffle :: Integer -> Shuffle -> [Int]
-simulateFullShuffle deckSize shuffle =
-  map (fromJust . flip elemIndex positions) [0 .. deckSize - 1]
+simulateFullShuffle :: KnownNat m => Shuffle m -> [Int]
+simulateFullShuffle shuffle =
+  map
+    (fromJust . flip elemIndex positions . fromInteger)
+    [0 .. base shuffle - 1]
   where
-    positions = map (apply deckSize shuffle) [0 .. deckSize - 1]
+    positions = map (apply shuffle . fromInteger) [0 .. base shuffle - 1]
 
 testData :: [String]
 testData =
@@ -132,8 +136,8 @@ tests =
     "day22"
     [ testCase "shuffle" $
       zipWithM_
-        (\shuffle expected -> simulateFullShuffle 10 shuffle @?= expected)
-        (map (parse 10) testData)
+        (\shuffle expected -> simulateFullShuffle @10 shuffle @?= expected)
+        (map parse testData)
         [ [9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
         , [3, 4, 5, 6, 7, 8, 9, 0, 1, 2]
         , [6, 7, 8, 9, 0, 1, 2, 3, 4, 5]

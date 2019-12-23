@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e7d90102dc2321d6851bf6c590988cb9401af659348e2db1567b889bfe793226
+-- hash: 11a56b7cce251d761be7473c1ed153d3524bc9f39a05880749c5b32c97a0839c
 
 name:           advent-of-code
 version:        0.1.0.0
@@ -58,6 +58,7 @@ library
     , async
     , base >=4.7 && <5
     , containers
+    , groups
     , linear
     , mtl
     , parsec
@@ -85,6 +86,7 @@ test-suite advent-of-code-test
     , async
     , base >=4.7 && <5
     , containers
+    , groups
     , linear
     , mtl
     , parsec
