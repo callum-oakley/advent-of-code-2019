@@ -21,14 +21,9 @@ dependencies:
 - split
 - vector
 - containers
-- mtl
-- stm
-- async
 - QuickCheck
-- array
 - sort
 - linear
-- parsec
 - groups
 
 library:

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 11a56b7cce251d761be7473c1ed153d3524bc9f39a05880749c5b32c97a0839c
+-- hash: a5e05b55036006ab864c60209cfd3cc386dbb8edb28dc080174f160236437121
 
 name:           advent-of-code
 version:        0.1.0.0
@@ -54,17 +54,12 @@ library
   ghc-options: -Wall -Wno-incomplete-patterns -Wno-type-defaults -fobject-code -O
   build-depends:
       QuickCheck
-    , array
-    , async
     , base >=4.7 && <5
     , containers
     , groups
     , linear
-    , mtl
-    , parsec
     , sort
     , split
-    , stm
     , tasty
     , tasty-hunit
     , tasty-quickcheck
@@ -82,17 +77,12 @@ test-suite advent-of-code-test
   build-depends:
       QuickCheck
     , advent-of-code
-    , array
-    , async
     , base >=4.7 && <5
     , containers
     , groups
     , linear
-    , mtl
-    , parsec
     , sort
     , split
-    , stm
     , tasty
     , tasty-hunit
     , tasty-quickcheck
