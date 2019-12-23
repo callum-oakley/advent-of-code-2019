@@ -1,6 +1,7 @@
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE KindSignatures   #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE KindSignatures      #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 
 module Day22 where
 
@@ -10,6 +11,7 @@ import           Data.Functor
 import           Data.Group
 import           Data.List
 import           Data.Maybe
+import           Data.Proxy
 import           Data.Ratio
 import           GHC.TypeLits         hiding (Mod)
 import           Test.Tasty
@@ -26,10 +28,8 @@ newtype Mod (m :: Nat) =
 unMod :: Mod (m :: Nat) -> Integer
 unMod (Mod n) = n
 
-instance KnownNat m => Num (Mod m) where
-  fromInteger x = y
-    where
-      y = Mod $ x `mod` natVal y
+instance forall m. KnownNat m => Num (Mod m) where
+  fromInteger x = Mod $ x `mod` natVal (Proxy :: Proxy m)
   (Mod x) + (Mod y) = fromInteger $ x + y
   (Mod x) * (Mod y) = fromInteger $ x * y
   (Mod x) - (Mod y) = fromInteger $ x - y
@@ -84,15 +84,15 @@ parse =
 apply :: KnownNat m => Shuffle m -> Mod m -> Mod m
 apply (Shuffle a b) card = a * card + b
 
-part1 :: IO Integer
+part1 :: IO (Mod 10007)
 part1 = do
   shuffle <- parse <$> readFile "data/input22"
-  pure . unMod $ apply @10007 shuffle 2019
+  pure $ apply shuffle 2019
 
-part2 :: IO Integer
+part2 :: IO (Mod 119315717514047)
 part2 = do
-  shuffle <- parse <$> readFile "data/input22"
-  pure . unMod $ apply @119315717514047 (pow shuffle (-101741582076661)) 2020
+  shuffle <- flip pow (-101741582076661) . parse <$> readFile "data/input22"
+  pure $ apply shuffle 2020
 
 -- just for testing
 simulateFullShuffle :: KnownNat m => Shuffle m -> [Int]
