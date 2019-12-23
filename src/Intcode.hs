@@ -4,6 +4,9 @@ module Intcode
   , runDynamic
   , runInteractive
   , runInteractiveAscii
+  , isInput
+  , isOutput
+  , isStop
   , expectInput
   , expectOutput
   , Program
@@ -156,6 +159,18 @@ runInteractiveAscii = go . runDynamic
     display o
       | o < 128 = [chr o]
       | otherwise = show o
+
+isInput :: Effect -> Bool
+isInput (Input _) = True
+isInput _         = False
+
+isOutput :: Effect -> Bool
+isOutput (Output _ _) = True
+isOutput _            = False
+
+isStop :: Effect -> Bool
+isStop Stop = True
+isStop _    = False
 
 -- Partial function for ergonomics when we know a priori that our machine is
 -- expecting an input.
