@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 6a740fc87f97d17572f6d118e411f1dfe7bb918ad6651cbd976bb742593d405c
+-- hash: 079556d5e4198269652364b6d9a24b3ea022b47697b98c94163f395ae76de794
 
 name:           advent-of-code
 version:        0.1.0.0
@@ -46,6 +46,7 @@ library
       Day22
       Day23
       Day24
+      Day25
       Intcode
       Search
   other-modules:

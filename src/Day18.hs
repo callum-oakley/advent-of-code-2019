@@ -206,10 +206,10 @@ tests =
     , testCase "part2'" . sequence_ $
       zipWith (\s expected -> part2' s @?= expected) testData2 [8, 24, 32, 72]
     -- TODO optimise. Part 1 and 2 take 104.46s and 496.06s at time of writing.
-    -- , testCase "part1" $ do
-    --     p1 <- part1
-    --     p1 @?= 3546
-    -- , testCase "part2" $ do
-    --     p2 <- part2
-    --     p2 @?= 1988
+    , testCase "part1" $ do
+        p1 <- part1
+        p1 @?= 3546
+    , testCase "part2" $ do
+        p2 <- part2
+        p2 @?= 1988
     ]
